@@ -41,14 +41,18 @@ function editMaskAt(event){
   const radius=Number($("brushSize").value)/2*(canvas.width/rect.width);
   const targetMasks=activeSurface==="walls"?[wallMask]:activeSurface==="ceiling"?[ceilingMask]:[wallMask,ceilingMask];
   const referenceMask=targetMasks.find(Boolean);if(!referenceMask)return;
-  const sx=referenceMask.width/canvas.width,sy=referenceMask.height/canvas.height;
-  const cx=px*sx,cy=py*sy,rx=Math.max(1,radius*sx),ry=Math.max(1,radius*sy);
-  const minX=Math.max(0,Math.floor(cx-rx)),maxX=Math.min(wallMask.width-1,Math.ceil(cx+rx));
-  const minY=Math.max(0,Math.floor(cy-ry)),maxY=Math.min(wallMask.height-1,Math.ceil(cy+ry));
   const value=maskEditMode==="add"?1:0;
-  for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
-    const dx=(x-cx)/rx,dy=(y-cy)/ry;
-    if(dx*dx+dy*dy<=1)wallMask.data[y*wallMask.width+x]=value;
+  // Edit each selected mask in its own coordinate space; supports ceiling-only photos too.
+  for(const maskObj of targetMasks){
+    if(!maskObj)continue;
+    const sx=maskObj.width/canvas.width,sy=maskObj.height/canvas.height;
+    const cx=px*sx,cy=py*sy,rx=Math.max(1,radius*sx),ry=Math.max(1,radius*sy);
+    const minX=Math.max(0,Math.floor(cx-rx)),maxX=Math.min(maskObj.width-1,Math.ceil(cx+rx));
+    const minY=Math.max(0,Math.floor(cy-ry)),maxY=Math.min(maskObj.height-1,Math.ceil(cy+ry));
+    for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
+      const dx=(x-cx)/rx,dy=(y-cy)/ry;
+      if(dx*dx+dy*dy<=1)maskObj.data[y*maskObj.width+x]=value;
+    }
   }
   paintPreview();
 }
@@ -59,7 +63,8 @@ canvas.addEventListener("pointercancel",()=>{isMaskPainting=false;});
 function updateSelected(){$("selectedSwatch").style.background=selectedShade.hex;$("selectedName").textContent=selectedShade.name;$("selectedCode").textContent=`Book of Colours 2015 · ${selectedShade.code}`;document.querySelector(".tag-swatch").style.background=selectedShade.hex;renderShades()}
 function setImage(img){sourceImage=img;wallMask=null;ceilingMask=null;previewEnabled=false;$("maskTools").hidden=true;canvas.classList.remove("mask-editing");$("recommendationBox").hidden=true;$("emptyState").hidden=true;canvas.hidden=false;$("previewTip").hidden=false;$("previewStatus").textContent="PHOTO LOADED";$("detectBtn").disabled=false;paintOriginal();status("Photo ready. Click “Detect walls with AI” to start segmentation.");}
 function fitGeometry(img){const cw=canvas.width,ch=canvas.height,scale=Math.min(cw/img.naturalWidth,ch/img.naturalHeight),w=img.naturalWidth*scale,h=img.naturalHeight*scale;return{x:(cw-w)/2,y:(ch-h)/2,w,h,scale}}
-function paintOriginal(){if(!sourceImage)return;const frame=$("previewFrame");const maxW=1000,maxH=700,scale=Math.min(maxW/sourceImage.naturalWidth,maxH/sourceImage.naturalHeight,1);canvas.width=Math.round(sourceImage.naturalWidth*scale);canvas.height=Math.round(sourceImage.naturalHeight*scale);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(sourceImage,0,0,canvas.width,canvas.height);originalCanvas=document.createElement("canvas");originalCanvas.width=canvas.width;originalCanvas.height=canvas.height;originalCanvas.getContext("2d").drawImage(sourceImage,0,0,canvas.width,canvas.height);canvas.style.width="100%";canvas.style.height="100%";canvas.style.objectFit="contain";if(wallMask)paintPreview()}
+function paintOriginal(){if(!sourceImage)return;const frame=$("previewFrame");// iPad-friendly preview resolution: fewer pixels means faster recolouring and lower memory use.
+const maxW=720,maxH=500,scale=Math.min(maxW/sourceImage.naturalWidth,maxH/sourceImage.naturalHeight,1);canvas.width=Math.round(sourceImage.naturalWidth*scale);canvas.height=Math.round(sourceImage.naturalHeight*scale);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(sourceImage,0,0,canvas.width,canvas.height);originalCanvas=document.createElement("canvas");originalCanvas.width=canvas.width;originalCanvas.height=canvas.height;originalCanvas.getContext("2d").drawImage(sourceImage,0,0,canvas.width,canvas.height);canvas.style.width="100%";canvas.style.height="100%";canvas.style.objectFit="contain";if(wallMask)paintPreview()}
 function refineMask(raw,width,height){
   // Light 3x3 blur at the model's mask resolution reduces staircase edges
   // without broadly expanding the detected wall into nearby furniture.
@@ -196,9 +201,13 @@ $("detectBtn").addEventListener("click",async()=>{
     const model=await getSegmenter();
     status("Analysing the photo for wall and ceiling regions…");
     const inputCanvas=document.createElement("canvas");
-    inputCanvas.width=sourceImage.naturalWidth;
-    inputCanvas.height=sourceImage.naturalHeight;
-    inputCanvas.getContext("2d").drawImage(sourceImage,0,0);
+    // Downscale before inference to avoid allocating a huge canvas for phone/iPad photos.
+    // SegFormer resizes internally for its model input, so full-resolution input is unnecessary.
+    const inferenceMaxEdge=768;
+    const inferenceScale=Math.min(1,inferenceMaxEdge/Math.max(sourceImage.naturalWidth,sourceImage.naturalHeight));
+    inputCanvas.width=Math.max(1,Math.round(sourceImage.naturalWidth*inferenceScale));
+    inputCanvas.height=Math.max(1,Math.round(sourceImage.naturalHeight*inferenceScale));
+    inputCanvas.getContext("2d",{willReadFrequently:false}).drawImage(sourceImage,0,0,inputCanvas.width,inputCanvas.height);
     const results=await model(inputCanvas);
     const wallResults=results.filter(r=>String(r.label).toLowerCase().includes("wall"));
     const ceilingResults=results.filter(r=>String(r.label).toLowerCase().includes("ceiling"));

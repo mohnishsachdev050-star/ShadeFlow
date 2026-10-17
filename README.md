@@ -23,3 +23,8 @@ Create a **Web Service** from this repository. Use build command `npm install` a
 - The sample room is included as both `sample-room.png` at the repository root and `images/sample-room.png` for compatibility.
 - The store finder attempts to retrieve public listings from official Asian Paints locator pages; availability depends on those pages and their response format.
 - Never commit real secrets or `.env` files.
+
+
+## iPad performance update
+
+The visual preview is capped at 720×500 pixels, and the image passed to the segmentation pipeline is downscaled to a maximum 768-pixel long edge before inference. This reduces canvas pixel work and temporary memory use on iPad (including the 9th generation). SegFormer still runs locally in the browser using WASM; first model download and inference can still take time. No paid AI API was added.
