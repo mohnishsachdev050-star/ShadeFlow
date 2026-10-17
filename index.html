@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShadeFlow AI — Smart Paint Visualiser</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#"><span class="brand-mark">S</span><span>ShadeFlow <span class="brand-ai">AI</span></span></a>
+  <span class="top-note"><span class="live-dot"></span> SMART COLOUR STUDIO</span>
+</header>
+<main>
+  <section class="hero">
+    <div>
+      <p class="eyebrow">YOUR SPACE, REIMAGINED</p>
+      <h1>Find the shade.<br><span>Feel the difference.</span></h1>
+      <p class="hero-text">Upload a room photo. Detect walls and ceilings locally, explore colour ideas, and find nearby Asian Paints stores.</p>
+      <div class="hero-pills"><span>✦ AI wall & ceiling detection</span><span>◉ Colour previews</span><span>⌖ Asian Paints store finder</span></div>
+    </div>
+    <div class="hero-art"><div class="art-sun"></div><div class="art-frame"><div class="art-wall"></div><div class="art-window"></div><div class="art-sofa"></div><div class="art-plant">♣</div></div><div class="floating-tag"><span class="tag-swatch"></span><span><b>Your room, your palette</b><small>Imagine it before you paint</small></span></div></div>
+  </section>
+
+  <section class="workspace">
+    <div class="section-heading"><div><p class="eyebrow">YOUR COLOUR STUDIO</p><h2>Transform a space</h2></div><span class="step-label">01 <span>/</span> 03</span></div>
+    <div class="studio-grid">
+      <section class="panel">
+        <div class="panel-heading"><span class="number">01</span><div><h3>Choose a room photo</h3><p>Use your own photo or the sample room.</p></div></div>
+        <label class="upload-zone" id="uploadZone" for="photoInput"><input type="file" id="photoInput" accept="image/*"><span class="upload-icon">↑</span><strong>Drop a photo here</strong><span>or <u>browse files</u></span><small>JPG, PNG or WEBP · processed in your browser</small></label>
+        <button class="text-button" id="useDemoBtn" type="button">Load realistic sample room ↗</button>
+        <div class="ai-status" id="aiStatus"><span class="status-dot"></span><span id="aiStatusText">AI model loads when you first detect walls.</span></div>
+        <button class="primary-button" id="detectBtn" type="button" disabled>✦ Detect walls & ceiling with AI</button>
+        <p class="privacy-note">🔒 Photo processing happens in your browser. The AI model downloads from Hugging Face the first time you use it.</p>
+      </section>
+      <section class="panel preview-panel">
+        <div class="panel-heading"><span class="number">02</span><div><h3>Live wall preview</h3><p>Only detected wall pixels are recoloured.</p></div><span class="preview-status" id="previewStatus">NO PHOTO</span></div>
+        <div class="surface-mode-row" role="group" aria-label="Surface to colour">
+          <span>Paint surface:</span>
+          <button type="button" class="mask-tool active" id="wallsModeBtn" aria-pressed="true">Walls</button>
+          <button type="button" class="mask-tool" id="ceilingModeBtn" aria-pressed="false">Ceiling</button>
+          <button type="button" class="mask-tool" id="bothModeBtn" aria-pressed="false">Walls + ceiling</button>
+        </div>
+        <p class="surface-note" id="surfaceNote">Choose Walls, Ceiling, or Both. Select a catalogue shade to apply it to the active surface.</p>
+        <div class="preview-canvas" id="previewFrame">
+          <div class="empty-state" id="emptyState"><span class="empty-icon">▧</span><strong>Your room will appear here</strong><span>Load the sample room or upload a photo.</span></div>
+          <canvas id="resultCanvas" hidden></canvas>
+          <div class="preview-tip" id="previewTip" hidden>AI wall mask · preview only</div>
+        </div>
+        <div class="mask-tools" id="maskTools" hidden>
+          <div class="mask-tools-heading"><strong>Refine surface boundaries</strong><span>Edits apply to the selected surface</span></div>
+          <div class="mask-tool-row">
+            <button type="button" class="mask-tool active" id="eraseModeBtn" aria-pressed="true">− Remove area</button>
+            <button type="button" class="mask-tool" id="addModeBtn" aria-pressed="false">+ Add wall area</button>
+            <label class="brush-size-label" for="brushSize">Brush <input id="brushSize" type="range" min="8" max="70" value="28"><span id="brushSizeValue">28 px</span></label>
+          </div>
+          <p class="mask-help">Drag on the photo to correct the mask. Drag on the photo to remove wrongly detected areas or add missed wall/ceiling pixels. Select the surface above before editing.</p>
+        </div>
+        <div class="preview-footer"><span><span class="mini-dot"></span> Original details preserved where possible</span><button class="reset-button" id="resetBtn" type="button">Reset</button></div>
+      </section>
+    </div>
+
+    <section class="panel shade-panel">
+      <div class="shade-title-row"><div class="panel-heading"><span class="number">03</span><div><h3>Explore the colour catalogue</h3><p>Search the 2015 Book of Colours by shade name or code, then preview your selection on the detected walls.</p></div></div><span class="catalogue-note">BOOK OF COLOURS · 2015</span></div>
+      <div class="recommendation-box" id="recommendationBox" hidden>
+        <div class="recommendation-heading"><div><small>ROOM-BASED SUGGESTIONS</small><h4>Shades to try first</h4></div><span class="recommendation-badge">SUGGESTED</span></div>
+        <p id="recommendationReason">Suggestions are based on the photo's overall lighting and are a starting point.</p>
+        <div class="recommendation-shades" id="recommendationShades"></div>
+      </div>
+      <div class="catalogue-controls"><label class="shade-search-wrap" for="shadeSearch"><span>⌕</span><input id="shadeSearch" type="search" placeholder="Search shade name or code, e.g. 8332" autocomplete="off"></label><span class="shade-count" id="shadeCount">Loading catalogue…</span></div>
+      <div class="mood-tabs"><button class="mood-tab active" data-mood="all">All colours</button><button class="mood-tab" data-mood="neutral">Soft neutrals</button><button class="mood-tab" data-mood="green">Nature inspired</button><button class="mood-tab" data-mood="bold">Statement shades</button></div>
+      <div class="shade-grid" id="shadeGrid"></div>
+      <div class="load-more-wrap"><button class="load-more-button" id="loadMoreShadesBtn" type="button" hidden>Load more</button></div>
+      <div class="selected-shade"><div class="selected-swatch" id="selectedSwatch"></div><div class="selected-info"><small>SELECTED CATALOGUE SHADE</small><strong id="selectedName">Warm Linen</strong><span id="selectedCode">Book of Colours 2015 · 8332</span></div><button class="copy-button" id="copyShadeBtn">Copy details ↗</button></div>
+      <p class="disclaimer">Catalogue names and shade codes are extracted from the uploaded Asian Paints Book of Colours / Interiors 2015 PDF. This is a historical guide, not a guarantee of today’s available products. The PDF does not provide calibrated digital HEX values, so on-screen swatches are approximate and can differ from printed cards or actual paint. Local wall segmentation can also make mistakes; check the preview before relying on it.</p>
+    </section>
+
+    <section class="panel shade-chat" id="shadeChat">
+      <div class="panel-heading"><span class="number">04</span><div><h3>Ask the Shade Assistant</h3><p>Get paint-colour suggestions using ShadeFlowAI’s built-in guidance—no external AI service or API key.</p></div></div>
+      <div class="chat-transcript" id="chatTranscript" role="log" aria-live="polite"><div class="chat-message assistant-message">Hi! Tell me about your room—for example, “suggest calming colours for a small bedroom” or “what goes with a dark wooden sofa?”</div></div>
+      <form class="chat-form" id="shadeChatForm"><label class="sr-only" for="shadeChatInput">Ask for paint suggestions</label><input id="shadeChatInput" name="message" type="text" maxlength="500" placeholder="Ask about room colours, lighting, or moods…" autocomplete="off" required><button class="primary-button" type="submit">Get suggestions</button></form>
+      <p class="privacy-note">Suggestions are generated locally from the shade catalogue and simple colour-selection rules. They are guidance, not professional colour consultation.</p>
+    </section>
+
+    <section class="panel store-finder" id="storeFinder">
+      <div class="panel-heading"><span class="number">⌖</span><div><h3>Find Asian Paints stores</h3><p>Show Asian Paints store listings within 20 km of your current location.</p></div><span class="ai-online-label">NEARBY STORES</span></div>
+      <div class="store-search-row store-location-only">
+        <button class="primary-button store-location-button" id="useLocationBtn" type="button">◎ Find stores near my current location</button>
+      </div>
+      <p class="privacy-note" id="storeStatus">Allow location access to search for Asian Paints stores within 20 km.</p>
+      <div id="storeResults" class="store-results" aria-live="polite"></div>
+      <p class="privacy-note">Results are drawn from publicly displayed Asian Paints locator listings. Call, website, and directions appear when available.</p>
+    </section>
+</section>
+</main>
+<footer><span>ShadeFlow AI <span class="footer-dot">•</span> Independent prototype concept</span><span>Colour previews are approximate.</span></footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="script.js"></script>
+</body>
+</html>

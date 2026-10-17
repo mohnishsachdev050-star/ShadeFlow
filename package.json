@@ -1,0 +1,21 @@
+{
+  "name": "shadeflow-ai",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ShadeFlow paint visualiser with browser-side wall segmentation and Google Maps Asian Paints store finder",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check script.js && node --check shades.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
+    "cheerio": "^1.0.0"
+  }
+}
